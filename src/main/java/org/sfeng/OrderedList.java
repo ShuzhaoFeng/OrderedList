@@ -3,36 +3,49 @@ package org.sfeng;
 import java.util.*;
 
 public class OrderedList<E> implements List<E> {
-    private final HashMap<Integer, E> map = new HashMap<>();
+    private final HashMap<Integer, E> map = new HashMap<>() {{
+        put(0, null);
+        put(Integer.MAX_VALUE, null);
+    }};
+
+    private int head = -1;
+
+    private int tail = -1;
 
     @Override
     public int size() {
-        throw new UnsupportedOperationException();
+        return map.size() - 2;
     }
 
     @Override
     public boolean isEmpty() {
-        throw new UnsupportedOperationException();
+        return map.size() == 2;
     }
 
     @Override
     public boolean contains(Object o) {
-        throw new UnsupportedOperationException();
+        for (E e : map.values()) {
+            if (Objects.equals(e, o)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
     public Iterator<E> iterator() {
-        throw new UnsupportedOperationException();
+        return map.values().iterator();
     }
 
     @Override
     public Object[] toArray() {
-        throw new UnsupportedOperationException();
+        return map.values().toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        throw new UnsupportedOperationException();
+        return map.values().toArray(a);
     }
 
     @Override
@@ -72,27 +85,65 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public void clear() {
-        throw new UnsupportedOperationException();
+        map.clear();
+        head = -1;
+        tail = -1;
+        map.put(0, null);
+        map.put(Integer.MAX_VALUE, null);
     }
 
     @Override
     public boolean equals(Object o) {
-        throw new UnsupportedOperationException();
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        OrderedList<?> that = (OrderedList<?>) o;
+
+        return Objects.equals(map, that.map) &&
+                head == that.head &&
+                tail == that.tail;
     }
 
     @Override
     public int hashCode() {
-        throw new UnsupportedOperationException();
+        return Objects.hash(map, head, tail);
     }
 
     @Override
     public E get(int index) {
-        throw new UnsupportedOperationException();
+        if (index < 0 || index >= size()) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        int i = 0;
+        for (E e : map.values()) {
+            if (i == index) {
+                return e;
+            }
+            i++;
+        }
+
+        return null;
     }
 
     @Override
     public E set(int index, E element) {
-        throw new UnsupportedOperationException();
+        if (index < 0 || index >= size()) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        int i = 0;
+        for (Map.Entry<Integer, E> entry : map.entrySet()) {
+            if (i == index) {
+                E old = entry.getValue();
+                entry.setValue(element);
+                return old;
+            }
+            i++;
+        }
+
+        return null;
     }
 
     @Override
@@ -107,22 +158,153 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public int indexOf(Object o) {
-        throw new UnsupportedOperationException();
+        int i = 0;
+        for (E e : map.values()) {
+            if (Objects.equals(e, o)) {
+                return i;
+            }
+            i++;
+        }
+
+        return -1;
     }
 
     @Override
     public int lastIndexOf(Object o) {
-        throw new UnsupportedOperationException();
+        int i = 0;
+        int last = -1;
+        for (E e : map.values()) {
+            if (Objects.equals(e, o)) {
+                last = i;
+            }
+            i++;
+        }
+
+        return last;
     }
 
     @Override
     public ListIterator<E> listIterator() {
-        throw new UnsupportedOperationException();
+        return new ListIterator<>() {
+            private int cursor = 0;
+
+            @Override
+            public boolean hasNext() {
+                return cursor < size();
+            }
+
+            @Override
+            public E next() {
+                if (cursor >= size()) {
+                    throw new NoSuchElementException();
+                }
+
+                return get(cursor++);
+            }
+
+            @Override
+            public boolean hasPrevious() {
+                return cursor > 0;
+            }
+
+            @Override
+            public E previous() {
+                if (cursor <= 0) {
+                    throw new NoSuchElementException();
+                }
+
+                return get(--cursor);
+            }
+
+            @Override
+            public int nextIndex() {
+                return cursor;
+            }
+
+            @Override
+            public int previousIndex() {
+                return cursor - 1;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void set(E e) {
+                OrderedList.this.set(cursor - 1, e);
+            }
+
+            @Override
+            public void add(E e) {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     @Override
     public ListIterator<E> listIterator(int index) {
-        throw new UnsupportedOperationException();
+        if (index < 0 || index >= size()) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        return new ListIterator<>() {
+            private int cursor = index;
+
+            @Override
+            public boolean hasNext() {
+                return cursor < size();
+            }
+
+            @Override
+            public E next() {
+                if (cursor >= size()) {
+                    throw new NoSuchElementException();
+                }
+
+                return get(cursor++);
+            }
+
+            @Override
+            public boolean hasPrevious() {
+                return cursor > 0;
+            }
+
+            @Override
+            public E previous() {
+                if (cursor <= 0) {
+                    throw new NoSuchElementException();
+                }
+
+                return get(--cursor);
+            }
+
+            @Override
+            public int nextIndex() {
+                return cursor;
+            }
+
+            @Override
+            public int previousIndex() {
+                return cursor - 1;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void set(E e) {
+                OrderedList.this.set(cursor - 1, e);
+            }
+
+            @Override
+            public void add(E e) {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     @Override
