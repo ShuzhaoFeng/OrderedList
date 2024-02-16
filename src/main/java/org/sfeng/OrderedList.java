@@ -1,6 +1,8 @@
 package org.sfeng;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
+import java.lang.reflect.Field;
 
 public class OrderedList<E> implements List<E> {
     private final HashMap<Integer, E> map = new HashMap<>() {{
@@ -11,6 +13,25 @@ public class OrderedList<E> implements List<E> {
     private int head = -1;
 
     private int tail = -1;
+
+    public OrderedList(Class<E> type) {
+        Map<String, Class<?>> fields = getAllFields(type);
+
+        if (fields.containsKey("olRank")) {
+            var field = fields.get("olRank");
+            if (field.equals(Integer.class)) {
+                int modifiers = field.getModifiers();
+
+                if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers) || Modifier.isFinal(modifiers)) {
+                    throw new IllegalArgumentException("The 'olRank' field must be public, non-static and non-final");
+                }
+            } else {
+                throw new IllegalArgumentException("The 'olRank' field must be of type Integer");
+            }
+        } else {
+            throw new IllegalArgumentException("The class must have a public field named 'olRank' of type Integer");
+        }
+    }
 
     @Override
     public int size() {
@@ -50,7 +71,24 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public boolean add(E e) {
-        throw new UnsupportedOperationException();
+        int olRank;
+
+        try {
+            olRank = e.getClass().getField("olRank").getInt(e);
+        } catch (NoSuchFieldException | IllegalAccessException ex) {
+            throw new IllegalArgumentException("The element does not have a public field named 'olRank' of type Integer", ex);
+        }
+
+        if (olRank <= 0) {
+            // update rank and append to the end
+        }
+
+        if (map.containsKey(olRank)) {
+            throw new IllegalArgumentException("An element with the same rank already exists");
+        }
+
+        map.put(olRank, e);
+        return true;
     }
 
     @Override
@@ -310,5 +348,21 @@ public class OrderedList<E> implements List<E> {
     @Override
     public List<E> subList(int fromIndex, int toIndex) {
         throw new UnsupportedOperationException();
+    }
+
+    private Map<String, Class<?>> getAllFields(Class<?> type) {
+        Map<String, Class<?>> fields = new HashMap<>();
+
+        for (Field field : type.getDeclaredFields()) {
+            fields.put(field.getName(), field.getClass());
+        }
+
+        Class<?> superClass = type.getSuperclass();
+
+        if (superClass != null) {
+            fields.putAll(getAllFields(superClass));
+        }
+
+        return fields;
     }
 }
