@@ -45,10 +45,33 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public boolean contains(Object o) {
+        try {
+            int olRank = o.getClass().getField("olRank").getInt(o);
+
+            return Objects.equals(map.get(olRank), o);
+        } catch (NoSuchFieldException | IllegalAccessException ex) {
+            return false;
+        }
+    }
+
+    public boolean containsIgnoreRank(Object o) {
         for (E e : map.values()) {
-            if (Objects.equals(e, o)) {
-                return true;
+            if (e == o) return true;
+
+            if (e.getClass() != o.getClass()) continue;
+
+            for (Map.Entry<String, Class<?>> entry : getAllFields(o.getClass()).entrySet()) {
+                try {
+                    Field field = o.getClass().getField(entry.getKey());
+                    if (field.get(o) != field.get(e)) {
+                        return false;
+                    }
+                } catch (NoSuchFieldException | IllegalAccessException ex) {
+                    return false;
+                }
             }
+
+            return true;
         }
 
         return false;
@@ -75,12 +98,19 @@ public class OrderedList<E> implements List<E> {
 
         try {
             olRank = e.getClass().getField("olRank").getInt(e);
+
+            // if the rank is not set, update rank to append at the end
+            if (olRank <= 0) {
+                olRank = computeRank(tail, Integer.MAX_VALUE);
+
+                if (olRank == -1) {
+                    olRank = rippleBalanceLoad(size() - 1);
+                }
+
+                e.getClass().getField("olRank").setInt(e, olRank);
+            }
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new IllegalArgumentException("The element does not have a public field named 'olRank' of type Integer", ex);
-        }
-
-        if (olRank <= 0) {
-            // update rank and append to the end
         }
 
         if (map.containsKey(olRank)) {
@@ -93,17 +123,34 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public boolean remove(Object o) {
-        throw new UnsupportedOperationException();
+        for (Map.Entry<Integer, E> entry : map.entrySet()) {
+            if (Objects.equals(entry.getValue(), o)) {
+                map.remove(entry.getKey());
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        throw new UnsupportedOperationException();
+        for (Object o : c) {
+            if (!contains(o)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        throw new UnsupportedOperationException();
+        for (E e : c) {
+            add(e);
+        }
+
+        return true;
     }
 
     @Override
@@ -364,5 +411,15 @@ public class OrderedList<E> implements List<E> {
         }
 
         return fields;
+    }
+
+    private int computeRank(int before, int after) {
+        if (after - before < 2) return -1;
+
+        return (before + after) / 2;
+    }
+
+    private int rippleBalanceLoad(int index) {
+        throw new UnsupportedOperationException();
     }
 }
