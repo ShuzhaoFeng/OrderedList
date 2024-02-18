@@ -5,10 +5,7 @@ import java.util.*;
 import java.lang.reflect.Field;
 
 public class OrderedList<E> implements List<E> {
-    private final HashMap<Integer, E> map = new HashMap<>() {{
-        put(0, null);
-        put(Integer.MAX_VALUE, null);
-    }};
+    private final HashMap<Integer, E> map = new HashMap<>();
 
     private int head = -1;
 
@@ -35,12 +32,12 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public int size() {
-        return map.size() - 2;
+        return map.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return map.size() == 2;
+        return map.isEmpty();
     }
 
     @Override
@@ -108,6 +105,7 @@ public class OrderedList<E> implements List<E> {
                 }
 
                 e.getClass().getField("olRank").setInt(e, olRank);
+                tail = olRank;
             }
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new IllegalArgumentException("The element does not have a public field named 'olRank' of type Integer", ex);
@@ -125,7 +123,17 @@ public class OrderedList<E> implements List<E> {
     public boolean remove(Object o) {
         for (Map.Entry<Integer, E> entry : map.entrySet()) {
             if (Objects.equals(entry.getValue(), o)) {
+
+                if (entry.getKey() == head) {
+                    // TODO
+                }
+
+                if (entry.getKey() == tail) {
+                    // TODO
+                }
+
                 map.remove(entry.getKey());
+
                 return true;
             }
         }
@@ -173,8 +181,6 @@ public class OrderedList<E> implements List<E> {
         map.clear();
         head = -1;
         tail = -1;
-        map.put(0, null);
-        map.put(Integer.MAX_VALUE, null);
     }
 
     @Override
@@ -233,7 +239,7 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public void add(int index, E element) {
-        throw new UnsupportedOperationException();
+
     }
 
     @Override
