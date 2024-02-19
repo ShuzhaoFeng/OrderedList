@@ -5,16 +5,15 @@ import java.util.*;
 import java.lang.reflect.Field;
 
 public class OrderedList<E> implements List<E> {
-    private final HashMap<Integer, E> map = new HashMap<>() {{
-        put(0, null);
-        put(Integer.MAX_VALUE, null);
-    }};
+    private final HashMap<Integer, OrderedListNode<E>> map = new HashMap<>();
 
     private int head = -1;
 
     private int tail = -1;
 
-    public OrderedList(Class<E> type) {
+    private final Field olRank;
+
+    public OrderedList(Class<E> type){
         Map<String, Class<?>> fields = getAllFields(type);
 
         if (fields.containsKey("olRank")) {
@@ -24,6 +23,12 @@ public class OrderedList<E> implements List<E> {
 
                 if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers) || Modifier.isFinal(modifiers)) {
                     throw new IllegalArgumentException("The 'olRank' field must be public, non-static and non-final");
+                }
+
+                try {
+                    olRank = type.getField("olRank");
+                } catch (NoSuchFieldException ex) {
+                    throw new IllegalArgumentException("The class must have a public field named 'olRank' of type Integer");
                 }
             } else {
                 throw new IllegalArgumentException("The 'olRank' field must be of type Integer");
@@ -35,35 +40,35 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public int size() {
-        return map.size() - 2;
+        return map.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return map.size() == 2;
+        return map.isEmpty();
     }
 
     @Override
     public boolean contains(Object o) {
         try {
-            int olRank = o.getClass().getField("olRank").getInt(o);
+            int rank = olRank.getInt(o);
 
-            return Objects.equals(map.get(olRank), o);
-        } catch (NoSuchFieldException | IllegalAccessException ex) {
+            return Objects.equals(map.get(rank).getData(), o);
+        } catch (IllegalAccessException ex) {
             return false;
         }
     }
 
     public boolean containsIgnoreRank(Object o) {
-        for (E e : map.values()) {
-            if (e == o) return true;
+        for (OrderedListNode<E> node : map.values()) {
+            if (node.getData() == o) return true;
 
-            if (e.getClass() != o.getClass()) continue;
+            if (node.getData().getClass() != o.getClass()) continue;
 
             for (Map.Entry<String, Class<?>> entry : getAllFields(o.getClass()).entrySet()) {
                 try {
                     Field field = o.getClass().getField(entry.getKey());
-                    if (field.get(o) != field.get(e)) {
+                    if (field.get(o) != field.get(node.getData())) {
                         return false;
                     }
                 } catch (NoSuchFieldException | IllegalAccessException ex) {
@@ -79,53 +84,67 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public Iterator<E> iterator() {
-        return map.values().iterator();
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object[] toArray() {
-        return map.values().toArray();
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        return map.values().toArray(a);
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean add(E e) {
-        int olRank;
+        int rank;
 
         try {
-            olRank = e.getClass().getField("olRank").getInt(e);
+            rank = olRank.getInt(e);
 
             // if the rank is not set, update rank to append at the end
-            if (olRank <= 0) {
-                olRank = computeRank(tail, Integer.MAX_VALUE);
+            if (rank <= 0) {
+                rank = computeRank(tail, Integer.MAX_VALUE);
 
-                if (olRank == -1) {
-                    olRank = rippleBalanceLoad(size() - 1);
+                if (rank == -1) {
+                    rank = rippleBalanceLoad(size() - 1);
                 }
 
-                e.getClass().getField("olRank").setInt(e, olRank);
+                e.getClass().getField("olRank").setInt(e, rank);
+                tail = rank;
             }
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new IllegalArgumentException("The element does not have a public field named 'olRank' of type Integer", ex);
         }
 
-        if (map.containsKey(olRank)) {
+        if (map.containsKey(rank)) {
             throw new IllegalArgumentException("An element with the same rank already exists");
         }
 
-        map.put(olRank, e);
+        // TODO: add element to map, attach prev and next
         return true;
     }
 
     @Override
     public boolean remove(Object o) {
-        for (Map.Entry<Integer, E> entry : map.entrySet()) {
+        for (Map.Entry<Integer, OrderedListNode<E>> entry : map.entrySet()) {
             if (Objects.equals(entry.getValue(), o)) {
+
+                if (entry.getKey() == head) {
+                    // TODO
+                }
+
+                if (entry.getKey() == tail) {
+                    // TODO
+                }
+
                 map.remove(entry.getKey());
+
                 return true;
             }
         }
@@ -173,8 +192,6 @@ public class OrderedList<E> implements List<E> {
         map.clear();
         head = -1;
         tail = -1;
-        map.put(0, null);
-        map.put(Integer.MAX_VALUE, null);
     }
 
     @Override
@@ -202,10 +219,11 @@ public class OrderedList<E> implements List<E> {
         }
 
         int i = 0;
-        for (E e : map.values()) {
+        for (OrderedListNode<E> node : map.values()) {
             if (i == index) {
-                return e;
+                return node.getData();
             }
+
             i++;
         }
 
@@ -219,12 +237,34 @@ public class OrderedList<E> implements List<E> {
         }
 
         int i = 0;
-        for (Map.Entry<Integer, E> entry : map.entrySet()) {
+        OrderedListNode<E> current = map.get(head);
+
+        while (current != null) {
             if (i == index) {
-                E old = entry.getValue();
-                entry.setValue(element);
+                E old = current.getData();
+
+                try {
+                    int rank = olRank.getInt(old);
+
+                    if (rank <= 0) {
+                        rank = computeRank(current.getPrev(), current.getNext());
+
+                        if (rank == -1) {
+                            rank = rippleBalanceLoad(size() - 1);
+                        }
+
+                        olRank.setInt(element, rank);
+                    }
+                } catch (IllegalAccessException ex) {
+                    throw new IllegalArgumentException("The element does not have a public field named 'olRank' of type Integer", ex);
+                }
+
+                current.setData(element);
                 return old;
             }
+
+            current = map.get(current.getNext());
+
             i++;
         }
 
@@ -244,10 +284,14 @@ public class OrderedList<E> implements List<E> {
     @Override
     public int indexOf(Object o) {
         int i = 0;
-        for (E e : map.values()) {
-            if (Objects.equals(e, o)) {
+        OrderedListNode<E> current = map.get(head);
+
+        while (current != null) {
+            if (Objects.equals(current.getData(), o)) {
                 return i;
             }
+            current = map.get(current.getNext());
+
             i++;
         }
 
@@ -257,15 +301,18 @@ public class OrderedList<E> implements List<E> {
     @Override
     public int lastIndexOf(Object o) {
         int i = 0;
-        int last = -1;
-        for (E e : map.values()) {
-            if (Objects.equals(e, o)) {
-                last = i;
+        OrderedListNode<E> current = map.get(tail);
+
+        while (current != null) {
+            if (Objects.equals(current.getData(), o)) {
+                return i;
             }
+            current = map.get(current.getPrev());
+
             i++;
         }
 
-        return last;
+        return -1;
     }
 
     @Override
@@ -420,6 +467,7 @@ public class OrderedList<E> implements List<E> {
     }
 
     private int rippleBalanceLoad(int index) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 }
