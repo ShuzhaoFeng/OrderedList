@@ -5,7 +5,10 @@ import java.util.*;
 import java.lang.reflect.Field;
 
 public class OrderedList<E> implements List<E> {
-    private final HashMap<Integer, OrderedListNode<E>> map = new HashMap<>();
+    private final HashMap<Integer, OrderedListNode<E>> map = new HashMap<>() {{
+        put(0, new OrderedListNode<>(null));
+        put(Integer.MAX_VALUE, new OrderedListNode<>(null));
+    }};
 
     private int head = -1;
 
@@ -40,12 +43,12 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public int size() {
-        return map.size();
+        return map.size() - 2;
     }
 
     @Override
     public boolean isEmpty() {
-        return map.isEmpty();
+        return size() == 0;
     }
 
     @Override
@@ -84,8 +87,25 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public Iterator<E> iterator() {
-        // TODO
-        throw new UnsupportedOperationException();
+        return new Iterator<>() {
+            private int current = 0;
+
+            @Override
+            public boolean hasNext() {
+                OrderedListNode<E> node = map.get(current);
+                return node != null && node.getNext() != -1;
+            }
+
+            @Override
+            public E next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+
+                current = map.get(current).getNext();
+                return map.get(current).getData();
+            }
+        };
     }
 
     @Override
@@ -174,22 +194,27 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void clear() {
         map.clear();
+        map.put(0, new OrderedListNode<>(null));
+        map.put(Integer.MAX_VALUE, new OrderedListNode<>(null));
         head = -1;
         tail = -1;
     }
@@ -214,233 +239,55 @@ public class OrderedList<E> implements List<E> {
 
     @Override
     public E get(int index) {
-        if (index < 0 || index >= size()) {
-            throw new IndexOutOfBoundsException();
-        }
-
-        int i = 0;
-        for (OrderedListNode<E> node : map.values()) {
-            if (i == index) {
-                return node.getData();
-            }
-
-            i++;
-        }
-
-        return null;
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public E set(int index, E element) {
-        if (index < 0 || index >= size()) {
-            throw new IndexOutOfBoundsException();
-        }
-
-        int i = 0;
-        OrderedListNode<E> current = map.get(head);
-
-        while (current != null) {
-            if (i == index) {
-                E old = current.getData();
-
-                try {
-                    int rank = olRank.getInt(old);
-
-                    if (rank <= 0) {
-                        rank = computeRank(current.getPrev(), current.getNext());
-
-                        if (rank == -1) {
-                            rank = rippleBalanceLoad(size() - 1);
-                        }
-
-                        olRank.setInt(element, rank);
-                    }
-                } catch (IllegalAccessException ex) {
-                    throw new IllegalArgumentException("The element does not have a public field named 'olRank' of type Integer", ex);
-                }
-
-                current.setData(element);
-                return old;
-            }
-
-            current = map.get(current.getNext());
-
-            i++;
-        }
-
-        return null;
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void add(int index, E element) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 
     @Override
     public E remove(int index) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 
     @Override
     public int indexOf(Object o) {
-        int i = 0;
-        OrderedListNode<E> current = map.get(head);
-
-        while (current != null) {
-            if (Objects.equals(current.getData(), o)) {
-                return i;
-            }
-            current = map.get(current.getNext());
-
-            i++;
-        }
-
-        return -1;
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public int lastIndexOf(Object o) {
-        int i = 0;
-        OrderedListNode<E> current = map.get(tail);
-
-        while (current != null) {
-            if (Objects.equals(current.getData(), o)) {
-                return i;
-            }
-            current = map.get(current.getPrev());
-
-            i++;
-        }
-
-        return -1;
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ListIterator<E> listIterator() {
-        return new ListIterator<>() {
-            private int cursor = 0;
-
-            @Override
-            public boolean hasNext() {
-                return cursor < size();
-            }
-
-            @Override
-            public E next() {
-                if (cursor >= size()) {
-                    throw new NoSuchElementException();
-                }
-
-                return get(cursor++);
-            }
-
-            @Override
-            public boolean hasPrevious() {
-                return cursor > 0;
-            }
-
-            @Override
-            public E previous() {
-                if (cursor <= 0) {
-                    throw new NoSuchElementException();
-                }
-
-                return get(--cursor);
-            }
-
-            @Override
-            public int nextIndex() {
-                return cursor;
-            }
-
-            @Override
-            public int previousIndex() {
-                return cursor - 1;
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void set(E e) {
-                OrderedList.this.set(cursor - 1, e);
-            }
-
-            @Override
-            public void add(E e) {
-                throw new UnsupportedOperationException();
-            }
-        };
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ListIterator<E> listIterator(int index) {
-        if (index < 0 || index >= size()) {
-            throw new IndexOutOfBoundsException();
-        }
-
-        return new ListIterator<>() {
-            private int cursor = index;
-
-            @Override
-            public boolean hasNext() {
-                return cursor < size();
-            }
-
-            @Override
-            public E next() {
-                if (cursor >= size()) {
-                    throw new NoSuchElementException();
-                }
-
-                return get(cursor++);
-            }
-
-            @Override
-            public boolean hasPrevious() {
-                return cursor > 0;
-            }
-
-            @Override
-            public E previous() {
-                if (cursor <= 0) {
-                    throw new NoSuchElementException();
-                }
-
-                return get(--cursor);
-            }
-
-            @Override
-            public int nextIndex() {
-                return cursor;
-            }
-
-            @Override
-            public int previousIndex() {
-                return cursor - 1;
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void set(E e) {
-                OrderedList.this.set(cursor - 1, e);
-            }
-
-            @Override
-            public void add(E e) {
-                throw new UnsupportedOperationException();
-            }
-        };
+        // TODO
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public List<E> subList(int fromIndex, int toIndex) {
+        // TODO
         throw new UnsupportedOperationException();
     }
 
